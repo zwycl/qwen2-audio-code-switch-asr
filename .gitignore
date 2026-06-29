@@ -1,6 +1,3 @@
-# AfriSpeech dataset
-afrispeech_data/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -45,3 +42,6 @@ outputs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Paper PDF
+interspeech2026.pdf

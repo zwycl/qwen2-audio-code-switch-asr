@@ -1,13 +1,13 @@
-# Reinforcement Learning for Sample-Efficient Code-Switched ASR
+# Reinforcement Learning for Data-Efficient Code-Switched ASR
 
-Code for the paper **"Reinforcement Learning for Sample-Efficient Code-Switched ASR"**
+Code for the paper **"Reinforcement Learning for Data-Efficient Code-Switched ASR"**
 
 We adapt the audio-language model **Qwen2-Audio-7B-Instruct** to code-switched ASR with
 **RLVR (reinforcement learning with verifiable rewards) using GRPO**. The recipe combines:
 
-- a **CER reward** that directly optimizes transcription quality and eliminates whole-utterance translation errors,
-- a **Script-Fidelity (SHR) reward** that penalizes characters from writing systems unrelated to the language pair, reducing script contamination, and
-- a **two-pass draft-and-refinement** GRPO procedure ("listen again and fix") at training time.
+- a **CER reward** that directly optimizes transcription quality and eliminates whole-utterance translation errors (paper §3.2–3.3),
+- a **Script-Fidelity (SHR) reward** that penalizes characters from writing systems unrelated to the language pair, reducing script contamination (paper §3.3), and
+- a **two-pass draft-and-refinement** GRPO procedure ("listen again and fix") at training time (paper §3.4, Algorithm 1).
 
 Trained only on TTS-synthesized code-switched speech (CS-FLEURS), RLVR with **10% of the data
 matches LoRA SFT trained on the full set**, with the largest gains on typologically distant pairs,
@@ -15,6 +15,25 @@ and the improvements **transfer zero-shot** to the human-recorded SwitchLingua c
 
 The training/RL code lives under `r1-aqa-main/` and is built on the
 [R1-AQA](https://github.com/xiaomi-research/r1-aqa) GRPO framework.
+
+## Paper
+
+Method and results: **"Reinforcement Learning for Data-Efficient Code-Switched ASR"** (Ye & Vickers).
+The map below links each part of the paper to the code that implements it (paths relative to `r1-aqa-main/`):
+
+| Paper | Topic | Code |
+|---|---|---|
+| §3.2 (Eq. 1–2) | RLVR with GRPO objective | `src/trainer/grpo_trainer.py` |
+| §3.3 | CER reward + Script-Fidelity (SHR) reward | `src/utils/rewards.py` |
+| §3.4 + Algorithm 1 | Two-pass draft-and-refinement | `src/train_csfleurs.py`; refinement prompts in `src/dataset/__init__.py` |
+| §4.1 | CS-FLEURS / SwitchLingua datasets | `src/dataset/csfleurs_dataset.py`, `src/dataset/switchlingua_dataset.py`, `src/preprocess_csfleurs_markers.py` |
+| §4.2–4.3 | LoRA SFT baseline + training details | `train_lora_csfleurs.py`, `run_csfleurs.sh`, `configs/zero2.json` |
+| §4.4 | CER & SHR metrics | `src/evaluate_csfleurs.py`, `src/evaluate_switchlingua.py` |
+| §5 + Table 1 | Main results (multi-seed, n=3) | `run_eval_multi_seed_csfleurs.sh`, `run_eval_multi_seed_switchlingua.sh` |
+| §6.1 + Figure 2 | Reward ablation (translation / wrong-script rates) | `scripts/generate_fig_failure_modes.py` |
+| §6.2 | LoRA-vs-RLVR failure-case analysis | `scripts/generate_tab_lora_vs_rlvr.py` |
+
+> The paper PDF (`interspeech2026.pdf`) is kept locally and is not tracked in this repo (see `.gitignore`).
 
 ## Repository layout
 
@@ -55,7 +74,7 @@ pip install -r requirements_lora.txt   # for the LoRA baseline
 > English / Chinese text normalization. Vendored copies are kept under `eval_audio/`; ensure they
 > are importable (or `pip install whisper-normalizer`) before training/evaluating.
 
-## Data
+## Data (paper §4.1)
 
 - **CS-FLEURS** — `XTTS-Train` (synthetic) for training, `Read-Test` (human-recorded) for
   evaluation. Run `python r1-aqa-main/src/preprocess_csfleurs_markers.py` first
@@ -71,7 +90,7 @@ bash run_csfleurs.sh          # RLVR / GRPO (CER + SHR reward, two-pass refineme
 bash run_lora_csfleurs.sh     # LoRA SFT baseline
 ```
 
-Defaults follow the paper: Qwen2-Audio-7B-Instruct, frozen audio encoder, DeepSpeed ZeRO-2 on
+Defaults follow the paper (§4.3): Qwen2-Audio-7B-Instruct, frozen audio encoder, DeepSpeed ZeRO-2 on
 8 GPUs, G=8 samples/prompt, lr 1e-6. Edit the data fraction / reward flags inside the scripts.
 
 ## Evaluation
@@ -85,13 +104,13 @@ bash run_eval_multi_seed_csfleurs.sh
 bash run_eval_multi_seed_switchlingua.sh
 ```
 
-Metrics: **CER** (macro- and micro-averaged) and **SHR** (Script Hallucination Rate).
+Metrics (paper §4.4): **CER** (macro- and micro-averaged) and **SHR** (Script Hallucination Rate).
 
 ## Reproducing paper figures/tables
 
 ```bash
-python r1-aqa-main/scripts/generate_fig_failure_modes.py   # translation / wrong-script rates
-python r1-aqa-main/scripts/generate_tab_lora_vs_rlvr.py    # LoRA-vs-RLVR breakdown
+python r1-aqa-main/scripts/generate_fig_failure_modes.py   # Figure 2 / §6.1: translation & wrong-script rates
+python r1-aqa-main/scripts/generate_tab_lora_vs_rlvr.py    # Table 1 / §6.2: LoRA-vs-RLVR breakdown
 ```
 
 ## Acknowledgements
